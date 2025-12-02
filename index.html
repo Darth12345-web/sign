@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>O&B Game Saver</title>
+  <style>
+    body {
+      margin: 0;
+      font-family: 'Segoe UI', sans-serif;
+      background: linear-gradient(135deg, #0f2027, #203a43, #2c5364);
+      color: #fff;
+      height: 100vh;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+    }
+    .container {
+      background: rgba(255,255,255,0.05);
+      border: 2px solid rgba(255,255,255,0.2);
+      border-radius: 15px;
+      padding: 40px;
+      width: 600px;
+      text-align: center;
+      box-shadow: 0 0 30px rgba(0,0,0,0.6);
+    }
+    h1 {
+      font-size: 2em;
+      margin-bottom: 20px;
+      background: linear-gradient(90deg, #ff8c00, #ff0080);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+    input, button {
+      margin: 10px 0;
+      padding: 12px;
+      border-radius: 8px;
+      border: none;
+      font-size: 1em;
+    }
+    input[type="text"] {
+      width: 100%;
+      background: rgba(255,255,255,0.1);
+      color: #fff;
+    }
+    input[type="file"] {
+      background: rgba(255,255,255,0.1);
+      color: #fff;
+    }
+    button {
+      background: linear-gradient(90deg, #ff8c00, #ff0080);
+      color: #fff;
+      cursor: pointer;
+    }
+    .status {
+      margin-top: 20px;
+      font-size: 0.9em;
+      color: #ccc;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>O&B Game Saver</h1>
+    <p>Enter a game link or upload a saved file:</p>
+    <input type="text" id="urlInput" placeholder="https://example.github.io/game"><br>
+    <button onclick="saveGame()">Save & Download</button><br>
+    <input type="file" id="fileInput" accept=".html"><br>
+    <button onclick="processFile()">Inject Date & Download</button>
+    <div class="status" id="status"></div>
+  </div>
+
+  <script>
+    async function saveGame() {
+      const url = document.getElementById('urlInput').value.trim();
+      const status = document.getElementById('status');
+      if (!url) {
+        status.textContent = "Please enter a valid link.";
+        return;
+      }
+      try {
+        status.textContent = "Fetching content...";
+        const response = await fetch(url);
+        const text = await response.text();
+
+        // Inject date into HTML
+        const dateStamp = new Date().toLocaleString();
+        const injected = text.replace("</body>", `<div style="position:fixed;bottom:10px;right:10px;color:#888;font-size:12px;">Saved on ${dateStamp}<br>Source: ${url}</div></body>`);
+
+        // Save to localStorage
+        localStorage.setItem("savedGame", injected);
+
+        // Trigger download
+        const blob = new Blob([injected], {type: "text/html"});
+        const a = document.createElement("a");
+        a.href = URL.createObjectURL(blob);
+        a.download = "saved-game.html";
+        a.click();
+        URL.revokeObjectURL(a.href);
+
+        status.textContent = "Game saved with date injected!";
+      } catch (err) {
+        status.textContent = "Error: " + err.message;
+      }
+    }
+
+    function processFile() {
+      const fileInput = document.getElementById('fileInput');
+      const status = document.getElementById('status');
+      if (!fileInput.files.length) {
+        status.textContent = "Please upload an HTML file.";
+        return;
+      }
+      const file = fileInput.files[0];
+      const reader = new FileReader();
+      reader.onload = function(e) {
+        let text = e.target.result;
+
+        // Try to extract original link (look for <base> or comments)
+        let linkMatch = text.match(/https?:\/\/[^\s"']+/);
+        let originalLink = linkMatch ? linkMatch[0] : "Unknown";
+
+        // Inject date + link
+        const dateStamp = new Date().toLocaleString();
+        const injected = text.replace("</body>", `<div style="position:fixed;bottom:10px;right:10px;color:#888;font-size:12px;">Processed on ${dateStamp}<br>Source: ${originalLink}</div></body>`);
+
+        // Save to localStorage
+        localStorage.setItem("savedGame", injected);
+
+        // Trigger download
+        const blob = new Blob([injected], {type: "text/html"});
+        const a = document.createElement("a");
+        a.href = URL.createObjectURL(blob);
+        a.download = "processed-game.html";
+        a.click();
+        URL.revokeObjectURL(a.href);
+
+        status.textContent = "File processed with date injected!";
+      };
+      reader.readAsText(file);
+    }
+  </script>
+</body>
+</html>
